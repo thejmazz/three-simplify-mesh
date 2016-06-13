@@ -47,38 +47,87 @@ class PriorityQueue {
   }
 }
 
-const computeTriangleQuadric = (triangle) => {
-  // magic
-}
 
-export simplify({mesh, factor=1, threshold=0}) => {
-  const triangles = mesh.geometry.triangles
+export const simplify = ({mesh, factor=1, threshold=0}) => {
+  console.log(mesh)
+  console.log(factor)
+
+  const triangles = mesh.geometry.faces
 
   // Map of distinct vertices
   // TODO ensure distinct
-  const vectorToVertex = {}
+  // TODO better name
+  const vectorToVertex = []
+
+  const computeTriangleQuadric = (triangle) => {
+    // const { a, b, c } = triangle
+    const v1 = vectorToVertex[triangle.a]
+    const v2 = vectorToVertex[triangle.b]
+    const v3 = vectorToVertex[triangle.c]
+    console.log(v1.v, v2.v, v3.v)
+
+    const e1 = new THREE.Vector3().subVectors(v2.v, v1.v)
+    const e2 = new THREE.Vector3().subVectors(v3.v, v1.v)
+    console.log(e1, e2)
+
+    const n = new THREE.Vector3().crossVectors(e1, e2).normalize()
+
+    const { x, y, z } = v1.v
+    // const { x as a, y as b, z as c } = n
+    const a = n.x
+    const b = n.y
+    const c = n.z
+    const d = -a*x -b*y -c*z
+
+    const mat = new THREE.Matrix4().set(
+      a * a, a * b, a * c, a * d,
+  		a * b, b * b, b * c, b * d,
+  		a * c, b * c, c * c, c * d,
+  		a * d, b * d, c * d, d * d
+    )
+
+    return mat
+
+    // e1 := t.V2.Sub(t.V1)
+  	// e2 := t.V3.Sub(t.V1)
+  	// n := e1.Cross(e2).Normalize()
+  	// x, y, z := t.V1.X, t.V1.Y, t.V1.Z
+  	// a, b, c := n.X, n.Y, n.Z
+  	// d := -a*x - b*y - c*z
+  	// return Matrix{
+  	// 	a * a, a * b, a * c, a * d,
+  	// 	a * b, b * b, b * c, b * d,
+  	// 	a * c, b * c, c * c, c * d,
+  	// 	a * d, b * d, c * d, d * d,
+  	// }
+  }
+
+
   for (let i=0; i < triangles.length; i++) {
+    // a, b, c are vertex indices
     const { a, b, c } = triangles[i]
-    vectorToVertex[a] = new Vertex(a)
-    vectorToVertex[b] = new Vertex(b)
-    vectorToVertex[c] = new Vertex(c)
+    vectorToVertex[a] = new Vertex(mesh.geometry.vertices[a])
+    vectorToVertex[b] = new Vertex(mesh.geometry.vertices[b])
+    vectorToVertex[c] = new Vertex(mesh.geometry.vertices[c])
   }
 
   // ===========================================================================
   // 1. Compute Q for all initial vertices
   // ===========================================================================
   for (let i=0; i < triangles.length; i++) {
-    const triangel = triangles[i]
+    const triangle = triangles[i]
     const q = computeTriangleQuadric(triangle)
+    console.log(q)
+
     const { a, b, c } = triangle
     const v1 = vectorToVertex[a]
     const v2 = vectorToVertex[b]
     const v3 = vectorToVertex[c]
 
     // assumes add mutates it
-    v1.quadric.add(q)
-    v2.quadric.add(q)
-    v3.quadric.add(q)
+    v1.quadric = addMatrix4(v1.quadric, q)
+    v2.quadric = addMatrix4(v2.quadric, q)
+    v3.quadric = addMatrix4(v3.quadric, q)
   }
 
   const vertexToFaces = {}
@@ -223,12 +272,12 @@ export simplify({mesh, factor=1, threshold=0}) => {
   }
 
   // construct resulting mesh
-  const triangles = []
+  const newTriangles = []
   for (let i=0; i < distinctFaces.length; i++) {
     const { v1, v2, v3 } = distinctFaces[i]
 
-    triangles[i] = new Triangle(v1, v2, v3)
+    newTriangles[i] = new Triangle(v1, v2, v3)
   }
 
-  return new Mesh(triangles)
+  return new Mesh(newTriangles)
 }

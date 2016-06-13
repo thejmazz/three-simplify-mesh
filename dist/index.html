@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+  <head>
+    <title> Oasis </title>
+    <style>
+      body {
+        display: block;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="three.min.js"></script>
+    <script src="OBJLoader.js"></script>
+    <script src="OrbitControls.js"></script>
+    <script src="simplify.js"></script>
+    <script>
+      var W = window.innerWidth
+      var H = window.innerHeight
+
+      var scene = new THREE.Scene()
+
+      var camera = new THREE.PerspectiveCamera(75, W/H, 0.01, 1000)
+
+      var aLight = new THREE.AmbientLight(0xffffff)
+      // scene.add(aLight)
+      var cLight = new THREE.PointLight(0xffffff, 1, 1000)
+
+      camera.add(cLight)
+      cLight.position.set(0, 0, 1)
+      scene.add(camera)
+
+
+      var renderer = new THREE.WebGLRenderer({antialias: true})
+      renderer.setSize(W, H)
+      renderer.setClearColor(0xeac8a9)
+      document.body.appendChild(renderer.domElement)
+
+      var controls = new THREE.OrbitControls(camera, renderer.domElement)
+
+      var OBJLoader = new THREE.OBJLoader()
+
+
+      camera.position.set(0, 0, 0.175)
+
+
+      OBJLoader.load('bunny.obj', function(mesh) {
+        var oasis = mesh.children[0]
+
+        oasis.geometry = new THREE.Geometry().fromBufferGeometry(oasis.geometry)
+        oasis.geometry.center()
+
+        oasis.material = new THREE.MeshPhongMaterial({color: 0xde9c72})
+        scene.add(oasis)
+
+        simplify({mesh: oasis, factor: 0.5})
+      })
+
+      var render = function() {
+        renderer.render(scene, camera)
+
+        requestAnimationFrame(render)
+      }
+
+      render()
+    </script>
+  </body>
+</html>
